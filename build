@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+set -e
+
+cargo build --release
+cp ./target/riscv64-kartoffel-bot/release/kartoffel-bot kartoffel
+
+if [[ "$1" == "--copy" ]]; then
+    # Mac
+    if [[ -x "$(command -v pbcopy)" ]]; then
+        base64 -i kartoffel | pbcopy
+        exit
+    fi
+
+    # Wayland
+    if [[ -x "$(command -v wl-copy)" ]]; then
+        base64 kartoffel | wl-copy
+        exit
+    fi
+
+    # Xorg
+    if [[ -x "$(command -v xclip)" ]]; then
+        base64 kartoffel | xclip -sel clip
+        exit
+    fi
+
+    echo "err: can't figure out how to copy stuff to clipboard"
+    echo ""
+    echo "if you have a moment, please report it at:"
+    echo "    https://github.com/patryk27/kartoffel"
+    echo ""
+    echo "... and provide a bit of information on your setup (what's your system, desktop manager etc.)"
+
+    exit 1
+fi
+
+if [[ "$1" == "--upload" ]]; then
+    if [[ -z "$2" ]]; then
+        echo "err: missing session id"
+        echo
+        echo "usage:"
+        echo "    ./build --upload <sessionId>"
+        echo
+        echo "e.g.:"
+        echo "    ./build --upload 1234-1234-1234-1234"
+
+        exit 1
+    fi
+
+    status=$(
+        curl \
+            -s \
+            -o /dev/null \
+            -w "%{http_code}" \
+            -X POST \
+            -T kartoffel \
+            "https://kartoffels.pwy.io/api/sessions/$2/bots"
+    )
+
+    case "$status" in
+        "201")
+            echo "ok, bot uploaded"
+            ;;
+
+        "404")
+            echo "err: upload not expected, no such session exists"
+            ;;
+
+        "410")
+            echo "err: upload not expected - open the uploading dialog in game and try again"
+            ;;
+
+        *)
+            echo "err: couldn't upload the bot - retrying with more verbosity"
+            echo
+
+            sleep 2
+
+            curl \
+                -v \
+                -X POST \
+                -T kartoffel \
+                "https://kartoffels.pwy.io/api/sessions/$2/bots"
+
+            ;;
+    esac
+fi

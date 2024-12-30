@@ -1,0 +1,13 @@
+[package]
+name = "kartoffel-bot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kartoffel = { git = "https://github.com/Patryk27/kartoffels" }
+hashbrown = "0.15.2"
+rand = { version = "0.8.5", default-features = false, features = ["alloc", "nightly"] }
+rand_xoshiro = "0.6.0"
+
+[profile.release]
+lto = "thin"
